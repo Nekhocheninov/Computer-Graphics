@@ -18,8 +18,9 @@ Step-by-step development of a tiny software rasterizer based on [this material](
     ```
 # Sample
 
-[Step 1](https://github.com/Nekhocheninov/ComputerGraphics/tree/wireframe-rendering): Creating a wireframe renderer:
+[Step 1](https://github.com/Nekhocheninov/ComputerGraphics/tree/wireframe-rendering): Creating a wireframe renderer.
 
-[Step 2](https://github.com/Nekhocheninov/ComputerGraphics/tree/triangle): Filling triangles:
+[Step 2](https://github.com/Nekhocheninov/ComputerGraphics/tree/triangle): Filling triangles.
 
-<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_2.png" width="400"> <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_1.png" width="400">
+<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_2.png" width="400">
+<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_1.png" width="400">
