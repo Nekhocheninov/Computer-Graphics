@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <limits.h>
 #include "tga.h"
 #include "model.h"
 
@@ -10,52 +11,28 @@ void swap(int *a, int *b){
     *b = t;
 }
 
-int abs(int a){
-    return (a >= 0) ? a : -a;
-}
+int *zbuffer = NULL;
 
-// Bresenham's line algorithm
+// Triangle drawing algorithm with z-buffer
 
-void line (tgaImage *image, int x0, int y0, int x1, int y1, tgaColor color){
-    int steep = 0;
-
-    if (abs(y1 - y0) > abs(x1 - x0)) {
-        steep = 1;
-        swap(&x0, &y0);
-        swap(&x1, &y1);
-    }
-
-    if (x0 > x1) {
-        swap(&x0, &x1);
-        swap(&y0, &y1);
-    }
-
-    int x;
-    double y;
-    double k = ((double)(y1 - y0))/(x1 - x0);
-
-    for (x = x0, y = y0; x <= x1; ++x, y += k)
-        if (steep)
-            tgaSetPixel(image, y, x, color);
-        else
-            tgaSetPixel(image, x, y, color);
-}
-
-// Triangle drawing algorithm
-
-void triangle(tgaImage *image, int x0, int y0, int x1, int y1, int x2, int y2, tgaColor color){
+void triangle(tgaImage *image, int x0, int y0, int z0,
+                               int x1, int y1, int z1,
+                               int x2, int y2, int z2, tgaColor color, int *zbuffer){
     // Sort vertices by y coord
     if (y0 > y1){
         swap(&x0, &x1);
         swap(&y0, &y1);
+        swap(&z0, &z1);
     }
     if (y0 > y2){
         swap(&x0, &x2);
         swap(&y0, &y2);
+        swap(&z0, &z2);
     }
     if (y1 > y2){
         swap(&x1, &x2);
         swap(&y1, &y2);
+        swap(&z1, &z2);
     }
 
     int total_height = y2 - y0;
@@ -65,60 +42,30 @@ void triangle(tgaImage *image, int x0, int y0, int x1, int y1, int x2, int y2, t
         double alpha = (double) i / total_height;
         double beta  = (double)(i - (second_half ? y1 - y0 : 0)) / segment_height; // be careful: with above conditions no division by zero here
 
-        int ax, bx;
-
-        ax = x0 + (x2 - x0) * alpha;
-        bx = second_half ? x1 + (x2 - x1)*beta : x0 + (x1 - x0)*beta;
-
-        if (ax > bx)
+        int ax = rint(x0 + (x2 - x0) * alpha);
+        int ay = rint(y0 + (y2 - y0) * alpha);
+        int az = rint(z0 + (z2 - z0) * alpha);
+        int bx = rint(second_half ? x1 + (x2 - x1)*beta : x0 + (x1 - x0) * beta);
+        int by = rint(second_half ? y1 + (y2 - y1)*beta : y0 + (y1 - y0) * beta);
+        int bz = rint(second_half ? z1 + (z2 - z1)*beta : z0 + (z1 - z0) * beta);
+        if (ax > bx){
             swap(&ax, &bx);
-
-        for (int j = ax; j <= bx; j++)
-            tgaSetPixel(image, j, y0 + i, color);
-    }
-}
-
-// Wireframe rendering of the model
-
-void meshgrid(tgaImage *image, Model *model){
-    int face, vert, i;
-    int h = image->height;
-    int w = image->width;
-    tgaColor white = tgaRGB(255, 255, 255);
-    Vec3 *p[3];
-    for (face = 0; face < model->nface; ++face){
-        for (vert = 0; vert < 3; ++vert){
-            p[vert] = getVertex(model, face, vert);
+            swap(&ay, &by);
+            swap(&az, &bz);
         }
-        for (i = 0; i < 3; ++i){
-            line(image, ((*p[i])[0] + 1.0)*w/2, ((*p[i])[1] + 1.0)*h/2,
-                        ((*p[(i + 1)%3])[0] + 1.0)*w/2, ((*p[(i + 1)%3])[1] + 1.0)*h/2,
-                        white);
+
+        for (int j = ax; j <= bx; j++){
+            double phi = (bx == ax) ? 1. : (double)(j - ax) / (double)(bx - ax);
+            int px = rint(ax + (bx - ax) * phi);
+            int py = rint(ay + (by - ay) * phi);
+            int pz = rint(az + (bz - az) * phi);
+            int idx = px + py * image->width;
+            if (zbuffer[idx] < pz){
+                zbuffer[idx] = pz;
+                tgaSetPixel(image, px, py, color);
+            }
         }
     }
-    tgaFlipVertically(image);
-}
-
-// Multi-colored rendering of the model
-
-void coloredRender(tgaImage *image, Model *model){
-    int face, vert;
-    int h = image->height;
-    int w = image->width;
-    Vec3 *p[3];
-    int screen_coords[3][2];
-    for (face = 0; face < model->nface; ++face){
-        for (vert = 0; vert < 3; ++vert){
-            p[vert] = getVertex(model, face, vert);
-            screen_coords[vert][0] = ((*p[vert])[0] + 1.0)*w/2;
-            screen_coords[vert][1] = ((*p[vert])[1] + 1.0)*h/2;
-        }
-        triangle(image, screen_coords[0][0], screen_coords[0][1],
-                        screen_coords[1][0], screen_coords[1][1],
-                        screen_coords[2][0], screen_coords[2][1],
-                        tgaRGB(rand()%256, rand()%256, rand()%256));
-    }
-    tgaFlipVertically(image);    
 }
 
 // Rendering of the model
@@ -127,16 +74,23 @@ void render(tgaImage *image, Model *model){
     int face, vert;
     int h = image->height;
     int w = image->width;
+    int d = 255; // depth for z buffer
+
+    zbuffer = malloc(h * w * sizeof(int));
+    for (int i = 0; i < h * w; i++)
+        zbuffer[i] = INT_MIN;
+
     Vec3 *p[3];
     double n[3];
-    int screen_coords[3][2];
+    int sc[3][3]; // screen coords
     double wc[3][3]; // world coords;
 
     for (face = 0; face < model->nface; ++face){
         for (vert = 0; vert < 3; ++vert){
             p[vert] = getVertex(model, face, vert);
-            screen_coords[vert][0] = ((*p[vert])[0] + 1.0)*w/2;
-            screen_coords[vert][1] = ((*p[vert])[1] + 1.0)*h/2;
+            sc[vert][0] = ((*p[vert])[0] + 1.0)*w/2;
+            sc[vert][1] = ((*p[vert])[1] + 1.0)*h/2;
+            sc[vert][2] = ((*p[vert])[2] + 1.0)*d/2;
             wc[vert][0] = (*p[vert])[0];
             wc[vert][1] = (*p[vert])[1];
             wc[vert][2] = (*p[vert])[2];
@@ -155,11 +109,12 @@ void render(tgaImage *image, Model *model){
         double intensity = n[0] * 0. + n[1] * 0. + n[2] * (-1.);
         
         if (intensity > 0)
-            triangle(image, screen_coords[0][0], screen_coords[0][1],
-                            screen_coords[1][0], screen_coords[1][1],
-                            screen_coords[2][0], screen_coords[2][1],
-                            tgaRGB(intensity*255, intensity*255, intensity*255));
+            triangle(image, sc[0][0], sc[0][1], sc[0][2],
+                            sc[1][0], sc[1][1], sc[1][2],
+                            sc[2][0], sc[2][1], sc[2][2],
+                            tgaRGB(intensity*255, intensity*255, intensity*255), zbuffer);
     }
+    free(zbuffer);
     tgaFlipVertically(image);    
 }
 
@@ -187,8 +142,7 @@ int main(int argc, char **argv){
         tgaFreeImage(image);
         return -1;
     }
-
-    // meshgrid(image, model);
+    
     render(image, model);
 
     if (-1 == tgaSaveToFile(image, argv[2])){
