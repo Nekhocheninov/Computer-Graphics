@@ -18,6 +18,6 @@ Step-by-step development of a tiny software rasterizer based on [this material](
     ```
 # Sample
 
-Creating a wireframe renderer:
+[Step 1](https://github.com/Nekhocheninov/ComputerGraphics/tree/wireframe-rendering): Creating a wireframe renderer:
 
 <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/wireframe-rendering/img_1.png" width="800">
