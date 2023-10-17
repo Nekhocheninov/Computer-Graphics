@@ -58,42 +58,23 @@ void triangle(tgaImage *image, int x0, int y0, int x1, int y1, int x2, int y2, t
         swap(&y1, &y2);
     }
 
-    // Compute x coord deltas
-    double dx01 = 0, dx02 = 0, dx12 = 0;
-    if (y0 != y1){
-        dx01 = x1 - x0;
-        dx01 /= y1 - y0;
-    }
-    if (y0 != y2){
-        dx02 = x2 - x0;
-        dx02 /= y2 - y0;
-    }
-    if (y1 != y2){
-        dx12 = x2 - x1;
-        dx12 /= y2 - y1;
-    }
-    double _dx02 = dx02;
+    int total_height = y2 - y0;
+    for (int i = 0; i < total_height; i++){
+        int second_half = i > y1 - y0 || y1 == y0;
+        int segment_height = second_half ? y2 - y1 : y1 - y0;
+        double alpha = (double) i / total_height;
+        double beta  = (double)(i - (second_half ? y1 - y0 : 0)) / segment_height; // be careful: with above conditions no division by zero here
 
-    if (dx01 > dx02){
-        double t = dx01;
-        dx01 = dx02;
-        dx02 = t;
-    }
+        int ax, bx;
 
-    if (dx12 > _dx02){
-        double t = dx12;
-        dx12 = _dx02;
-        _dx02 = t;
-    }
+        ax = x0 + (x2 - x0) * alpha;
+        bx = second_half ? x1 + (x2 - x1)*beta : x0 + (x1 - x0)*beta;
 
-    // Fill the triangle
-    int y, x;
-    double xleft = x0, xright = x0;
-    for (y = y0; y <= y2; ++y){
-        for (x = xleft; x <= xright; ++x)
-            tgaSetPixel(image, x, y, color);
-        xleft += (y < y1) ? dx01 : _dx02;
-        xright += (y < y1) ? dx02 : dx12;
+        if (ax > bx)
+            swap(&ax, &bx);
+
+        for (int j = ax; j <= bx; j++)
+            tgaSetPixel(image, j, y0 + i, color);
     }
 }
 
