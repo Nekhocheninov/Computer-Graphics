@@ -14,7 +14,7 @@ Step-by-step development of a tiny software rasterizer based on [this material](
     ```
 3. Run the command to render:
     ```
-    .\render obj\cat.obj result.tga
+    .\render obj\cat.obj obj\cat_diffuse.tga result.tga
     ```
 # Sample
 
@@ -24,4 +24,6 @@ Step-by-step development of a tiny software rasterizer based on [this material](
 
 [Step 3](https://github.com/Nekhocheninov/ComputerGraphics/tree/z-buffer): Hidden faces removal.
 
-<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/z-buffer/img_1.png" width="800">
+[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/z-buffer): Adding texture.
+
+<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/texture/img_1.png" width="800">
