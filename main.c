@@ -11,12 +11,6 @@ void swap(int *a, int *b){
     *b = t;
 }
 
-void swap2(double *a, double *b){
-    double t = *a;
-    *a = *b;
-    *b = t;
-}
-
 int *zbuffer = NULL;
 
 // Triangle drawing algorithm with z-buffer
@@ -24,25 +18,31 @@ int *zbuffer = NULL;
 void triangle(tgaImage *image, int x0, int y0, int z0,
                                int x1, int y1, int z1,
                                int x2, int y2, int z2,
-                               double uvx0, double uvy0,
-                               double uvx1, double uvy1,
-                               double uvx2, double uvy2,
-                               double intensity, int *zbuffer, Model *model, tgaImage *texture){
+                               int uvx0, int uvy0,
+                               int uvx1, int uvy1,
+                               int uvx2, int uvy2,
+                               double intensity, int *zbuffer, Model *model){
     // Sort vertices by y coord
     if (y0 > y1){
         swap(&x0, &x1);
         swap(&y0, &y1);
         swap(&z0, &z1);
+        swap(&uvx0, &uvx1);
+        swap(&uvy0, &uvy1);
     }
     if (y0 > y2){
         swap(&x0, &x2);
         swap(&y0, &y2);
         swap(&z0, &z2);
+        swap(&uvx0, &uvx2);
+        swap(&uvy0, &uvy2);
     }
     if (y1 > y2){
         swap(&x1, &x2);
         swap(&y1, &y2);
         swap(&z1, &z2);
+        swap(&uvx1, &uvx2);
+        swap(&uvy1, &uvy2);
     }
 
     int total_height = y2 - y0;
@@ -58,17 +58,17 @@ void triangle(tgaImage *image, int x0, int y0, int z0,
         int bx = rint(second_half ? x1 + (x2 - x1)*beta : x0 + (x1 - x0) * beta);
         int by = rint(second_half ? y1 + (y2 - y1)*beta : y0 + (y1 - y0) * beta);
         int bz = rint(second_half ? z1 + (z2 - z1)*beta : z0 + (z1 - z0) * beta);
-        double uvax = (uvx0 + (uvx2 - uvx0) * alpha);
-        double uvay = (uvy0 + (uvy2 - uvy0) * alpha);
-        double uvbx = (second_half ? uvx1 + (uvx2 - uvx1)*beta : uvx0 + (uvx1 - uvx0) * beta);
-        double uvby = (second_half ? uvy1 + (uvy2 - uvy1)*beta : uvy0 + (uvy1 - uvy0) * beta);
+        int uvax = rint(uvx0 + (uvx2 - uvx0)*alpha);
+        int uvbx = rint(second_half ? uvx1 + (uvx2-uvx1)*beta : uvx0 + (uvx1-uvx0)*beta);
+        int uvay = rint(uvy0 + (uvy2 - uvy0)*alpha);
+        int uvby = rint(second_half ? uvy1 + (uvy2-uvy1)*beta : uvy0 + (uvy1-uvy0)*beta);
         if (ax > bx){
             swap(&ax, &bx);
             swap(&ay, &by);
             swap(&az, &bz);
 
-            swap2(&uvax, &uvbx);
-            swap2(&uvay, &uvby);
+            swap(&uvax, &uvbx);
+            swap(&uvay, &uvby);
         }
 
         for (int j = ax; j <= bx; j++){
@@ -77,15 +77,19 @@ void triangle(tgaImage *image, int x0, int y0, int z0,
             int py = rint(ay + (by - ay) * phi);
             int pz = rint(az + (bz - az) * phi);
             int idx = px + py * image->width;
-            double uvpx = (uvax + (uvbx - uvax) * phi);
-            double uvpy = (uvay + (uvby - uvay) * phi);
+            int uvpx = rint(abs(uvax + (uvbx - uvax) * phi));
+            int uvpy = rint(abs(uvay + (uvby - uvay) * phi));
             if (zbuffer[idx] < pz){
                 zbuffer[idx] = pz;
-                Vec3 uv = {uvpx, uvpy}; 
-                tgaColor color = getDiffuseColor(model, &uv);
-                //tgaColor color = tgaGetPixel(model->diffuse_map, uvpx, uvpy);
+                Vec3 temp = {0.0, 0.0, 0.0};
+                Vec3 *uv = &temp;;
+                (*uv)[0] = uvpx/1024.0;
+                (*uv)[1] = uvpy/1024.0;
+
+                tgaColor color = getDiffuseColor(model, uv);
+
                 color = tgaRGB(Red(color) * intensity, Green(color) * intensity, Blue(color) * intensity);
-                tgaSetPixel(image, px, py, color);
+                tgaSetPixel(image, px, py, color); // tgaSetPixel(image, j, u0+i, color);
             }
         }
     }
@@ -93,7 +97,7 @@ void triangle(tgaImage *image, int x0, int y0, int z0,
 
 // Rendering of the model
 
-void render(tgaImage *image, Model *model, tgaImage *texture){
+void render(tgaImage *image, Model *model){
     int face, vert;
     int h = image->height;
     int w = image->width;
@@ -104,10 +108,11 @@ void render(tgaImage *image, Model *model, tgaImage *texture){
         zbuffer[i] = INT_MIN;
 
     Vec3 *p[3];
+    Vec3 *uv[3];
     double n[3];
     int sc[3][3]; // screen coords
     double wc[3][3]; // world coords;
-    Vec3 *uv[3]; // uv map;
+    int tc[3][2]; // uv map;
 
     for (face = 0; face < model->nface; ++face){
         for (vert = 0; vert < 3; ++vert){
@@ -119,7 +124,8 @@ void render(tgaImage *image, Model *model, tgaImage *texture){
             wc[vert][0] = (*p[vert])[0];
             wc[vert][1] = (*p[vert])[1];
             wc[vert][2] = (*p[vert])[2];
-
+            tc[vert][0] = (1.0 - (*uv[vert])[0]) * model->diffuse_map->width;
+            tc[vert][1] = (1.0 - (*uv[vert])[1]) * model->diffuse_map->height; 
         }
         n[0] = (wc[2][1] - wc[0][1]) * (wc[1][2] - wc[0][2]) - (wc[2][2] - wc[0][2]) * (wc[1][1] - wc[0][1]);
         n[1] = (wc[2][2] - wc[0][2]) * (wc[1][0] - wc[0][0]) - (wc[2][0] - wc[0][0]) * (wc[1][2] - wc[0][2]); 
@@ -132,14 +138,15 @@ void render(tgaImage *image, Model *model, tgaImage *texture){
         n[2] = n[2] / norm;
 
         double intensity = n[0] * 0. + n[1] * 0. + n[2] * (-1.);
+
         if (intensity > 0)
             triangle(image, sc[0][0], sc[0][1], sc[0][2],
                             sc[1][0], sc[1][1], sc[1][2],
                             sc[2][0], sc[2][1], sc[2][2],
-                            (*uv[0])[0], (*uv[0])[1],
-                            (*uv[1])[0], (*uv[1])[1],
-                            (*uv[2])[0], (*uv[2])[1],
-                            intensity, zbuffer, model, texture);
+                            tc[0][0], tc[0][1],
+                            tc[1][0], tc[1][1],
+                            tc[2][0], tc[2][1],
+                            intensity, zbuffer, model);
     }
     free(zbuffer);
     tgaFlipVertically(image);    
@@ -165,8 +172,9 @@ int main(int argc, char **argv){
         freeModel(model);
         return -1;
     }
-
-    tgaImage *texture = tgaLoadFromFile(argv[2]);
+    
+    tgaFlipVertically(model->diffuse_map);
+    tgaFlipHorizontally(model->diffuse_map);
 
     tgaImage *image = NULL;
     image = tgaNewImage(800, 800, RGB);
@@ -178,7 +186,7 @@ int main(int argc, char **argv){
         return -1;
     }
     
-    render(image, model, texture);
+    render(image, model);
 
     if (-1 == tgaSaveToFile(image, argv[3])){
         perror("tgaSateToFile");
