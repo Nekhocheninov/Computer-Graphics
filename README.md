@@ -24,6 +24,8 @@ Step-by-step development of a tiny software rasterizer based on [this material](
 
 [Step 3](https://github.com/Nekhocheninov/ComputerGraphics/tree/z-buffer): Hidden faces removal.
 
-[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/z-buffer): Adding texture.
+[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/texture): Adding texture.
 
-<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/texture/img_1.png" width="800">
+[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/perspective-projection): Adding perspective projection.
+
+<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/perspective-projection/img_1.png" width="800">
