@@ -28,4 +28,8 @@ Step-by-step development of a tiny software rasterizer based on [this material](
 
 [Step 5](https://github.com/Nekhocheninov/ComputerGraphics/tree/perspective-projection): Adding perspective projection.
 
-<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/perspective-projection/img_1.png" width="800">
+[Step 6](https://github.com/Nekhocheninov/ComputerGraphics/tree/мoving-the-camera): Moving the camera.
+
+Look! It has a tail!
+
+<img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/мoving-the-camera/img_2.png" width="400"> <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/мoving-the-camera/img_1.png" width="400">
