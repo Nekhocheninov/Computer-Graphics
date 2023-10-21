@@ -11,7 +11,72 @@ void swap(int *a, int *b){
     *b = t;
 }
 
+void normalize(double n[3]){
+    double norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+    for (int i = 0; i < 3; i++)
+        n[i] /= norm;
+}
+
+void m2v(double m[4][4], double v[4], double result[4]){
+    for (int i = 0; i < 4; i++){
+        result[i] = 0.0;
+        for (int j = 0; j < 4; j++)
+            result[i] += m[i][j] * v[j];
+    }
+}
+
+void m2m(double m[4][4], double v[4][4], double result[4][4]){
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < 4; k++)
+                result[i][j] += m[i][k] * v[k][j];
+        }
+}
+
+void cross(Vec3 a, Vec3 b, Vec3 c){
+    c[0] = 0.; c[1] = 0.; c[2] = 0.;
+    c[0] = a[1] * b[2] - a[2] * b[1];
+    c[1] = a[2] * b[0] - a[0] * b[2];
+    c[2] = a[0] * b[1] - a[1] * b[0];
+}
+
 int *zbuffer = NULL;
+
+Vec3 light_dir = {1., 0., 1.};
+Vec3 eye = {-3.5, -1., -5.};
+Vec3 center = {0.6, 0., 0.};
+Vec3 up = {0., 1., 0.};
+
+double ModelView[4][4];
+
+void lookat(Vec3 eye, Vec3 center, Vec3 up) {
+    Vec3 z, x, y;
+    for (int i = 0; i < 3; i++)
+        z[i] = eye[i] - center[i];
+    normalize(z);
+
+    cross(up, z, x);
+    normalize(x);
+
+    cross(z, x, y);
+    normalize(y);
+    double Minv[4][4] = {{1., 0., 0., 0.},
+                         {0., 1., 0., 0.},
+                         {0., 0., 1., 0.},
+                         {0., 0., 0., 1.}};
+    double Tr[4][4] =   {{1., 0., 0., 0.},
+                         {0., 1., 0., 0.},
+                         {0., 0., 1., 0.},
+                         {0., 0., 0., 1.}};
+    for (int i = 0; i < 3; i++) {
+        Minv[0][i] = x[i];
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+        Tr[i][3] = -center[i];
+    }
+    m2m(Minv, Tr, ModelView);
+}
 
 // Triangle drawing algorithm with z-buffer
 
@@ -82,9 +147,11 @@ void triangle(tgaImage *image, int x0, int y0, int z0,
             if (zbuffer[idx] < pz){
                 zbuffer[idx] = pz;
                 Vec3 temp = {0.0, 0.0, 0.0};
-                Vec3 *uv = &temp;;
-                (*uv)[0] = uvpx/1024.0;
-                (*uv)[1] = uvpy/1024.0;
+                Vec3 *uv = &temp;
+                double width = model->diffuse_map->width;
+                double height = model->diffuse_map->height;
+                (*uv)[0] = uvpx/width;
+                (*uv)[1] = uvpy/height;
 
                 tgaColor color = getDiffuseColor(model, uv);
 
@@ -101,7 +168,7 @@ void render(tgaImage *image, Model *model){
     int face, vert;
     int h = image->height;
     int w = image->width;
-    int d = 255; // depth for z buffer
+    int d = 255;
 
     zbuffer = malloc(h * w * sizeof(int));
     for (int i = 0; i < h * w; i++)
@@ -114,30 +181,56 @@ void render(tgaImage *image, Model *model){
     double wc[3][3]; // world coords;
     int tc[3][2]; // uv map;
 
+    lookat(eye, center, up);
+    
+    double ViewPort[4] = {w/8., h/8., w*3./4., h*3./4.};
+    double m[4][4] =  {{ViewPort[2]/2., 0., 0., ViewPort[0]+ViewPort[2]/2.},
+                        {0., ViewPort[3]/2., 0., ViewPort[1]+ViewPort[3]/2.},
+                        {0., 0., d/2., d/2.},
+                        {0., 0., 0., 1.}};
+    Vec3 camera;
+    for (int i = 0; i < 3; i++)
+        camera[i] = (eye[i] - center[i]);
+    double norm = sqrt(camera[0]*camera[0] + camera[1]*camera[1] + camera[2]*camera[2]);
+    double pj[4][4] = {{1., 0., 0., 0.},
+                       {0., 1., 0., 0.},
+                       {0., 0., 1., 0.},
+                       {0., 0.,-1./norm, 1.}};
+    double v[4];
+
     for (face = 0; face < model->nface; ++face){
         for (vert = 0; vert < 3; ++vert){
             p[vert] = getVertex(model, face, vert);
             uv[vert] = getDiffuseUV(model, face, vert);
-            sc[vert][0] = ((*p[vert])[0] + 1.0)*w/2;
-            sc[vert][1] = ((*p[vert])[1] + 1.0)*h/2;
-            sc[vert][2] = ((*p[vert])[2] + 1.0)*d/2;
+            v[0] = (*p[vert])[0];
+            v[1] = (*p[vert])[1];
+            v[2] = (*p[vert])[2];
+            v[3] = 1.;
+            
+            double r1[4], r2[4];
+            m2v(ModelView, v, r1);
+            m2v(pj, r1, r2);
+            m2v(m, r2, r1);
+
+            
+            sc[vert][0] = r1[0]/r1[3];
+            sc[vert][1] = r1[1]/r1[3];
+            sc[vert][2] = r1[2]/r1[3];
+
             wc[vert][0] = (*p[vert])[0];
             wc[vert][1] = (*p[vert])[1];
             wc[vert][2] = (*p[vert])[2];
-            tc[vert][0] = (1.0 - (*uv[vert])[0]) * model->diffuse_map->width;
-            tc[vert][1] = (1.0 - (*uv[vert])[1]) * model->diffuse_map->height; 
+            
+            tc[vert][0] = (1. - (*uv[vert])[0]) * model->diffuse_map->width;
+            tc[vert][1] = (1. - (*uv[vert])[1]) * model->diffuse_map->height; 
         }
         n[0] = (wc[2][1] - wc[0][1]) * (wc[1][2] - wc[0][2]) - (wc[2][2] - wc[0][2]) * (wc[1][1] - wc[0][1]);
         n[1] = (wc[2][2] - wc[0][2]) * (wc[1][0] - wc[0][0]) - (wc[2][0] - wc[0][0]) * (wc[1][2] - wc[0][2]); 
         n[2] = (wc[2][0] - wc[0][0]) * (wc[1][1] - wc[0][1]) - (wc[2][1] - wc[0][1]) * (wc[1][0] - wc[0][0]);
 
-        double norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
-
-        n[0] = n[0] / norm;
-        n[1] = n[1] / norm;
-        n[2] = n[2] / norm;
-
-        double intensity = n[0] * 0. + n[1] * 0. + n[2] * (-1.);
+        normalize(n); normalize(light_dir);
+    
+        double intensity = n[0] * light_dir[0] + n[1] * light_dir[1] + n[2] * light_dir[2];
 
         if (intensity > 0)
             triangle(image, sc[0][0], sc[0][1], sc[0][2],
@@ -166,7 +259,7 @@ int main(int argc, char **argv){
         freeModel(model);
         return -1;
     }
-
+    
     if (!loadDiffuseMap(model, argv[2])){
         perror("loadDiffuseMap");
         freeModel(model);
