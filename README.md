@@ -26,6 +26,6 @@ Step-by-step development of a tiny software rasterizer based on [this material](
 
 [Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/texture): Adding texture.
 
-[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/perspective-projection): Adding perspective projection.
+[Step 5](https://github.com/Nekhocheninov/ComputerGraphics/tree/perspective-projection): Adding perspective projection.
 
 <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/perspective-projection/img_1.png" width="800">
