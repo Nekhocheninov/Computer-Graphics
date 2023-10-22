@@ -23,3 +23,11 @@ Step-by-step development of a tiny software rasterizer based on [this material](
 [Step 2](https://github.com/Nekhocheninov/ComputerGraphics/tree/triangle): Filling triangles.
 
 <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_2.png" width="400"> <img src="https://github.com/Nekhocheninov/ComputerGraphics/blob/triangle/img_1.png" width="400">
+
+[Step 3](https://github.com/Nekhocheninov/ComputerGraphics/tree/z-buffer): Hidden faces removal.
+
+[Step 4](https://github.com/Nekhocheninov/ComputerGraphics/tree/texture): Adding texture.
+
+[Step 5](https://github.com/Nekhocheninov/ComputerGraphics/tree/perspective-projection): Adding perspective projection.
+
+[Step 6](https://github.com/Nekhocheninov/ComputerGraphics/tree/мoving-the-camera): Moving the camera.
