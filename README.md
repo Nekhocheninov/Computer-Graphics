@@ -1,8 +1,11 @@
 # Computer Graphics in C
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/Nekhocheninov/Computer-Graphics/blob/main/LICENSE.md)
+![GitHub last commit](https://img.shields.io/github/last-commit/Nekhocheninov/Computer-Graphics)
+
 Step-by-step development of a tiny software rasterizer based on [this material](https://github.com/ssloy/tinyrenderer/wiki/Lesson-0:-getting-started) in C.
 
-### How To Start
+## How To Start
 
 1. Clone the repo:
     ```
@@ -16,7 +19,7 @@ Step-by-step development of a tiny software rasterizer based on [this material](
     ```
     .\render obj\cat.obj obj\cat_diffuse.tga result.tga
     ```
-# Sample
+## Sample
 
 [Step 1](https://github.com/Nekhocheninov/ComputerGraphics/tree/wireframe-rendering): Creating a wireframe renderer.
 
